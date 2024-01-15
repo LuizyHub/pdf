@@ -1,0 +1,95 @@
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+
+
+import org.apache.pdfbox.text.PDFTextStripper;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class Main {
+    public static void main(String[] args) {
+        String text = "";
+        try {
+            // PDF 파일 로드
+
+            System.out.println(System.getProperty("user.dir"));
+
+            File file = new File("src/main/resources/driver_test.pdf");
+            PDDocument document = Loader.loadPDF(file);
+
+
+            // PDFTextStripper를 사용하여 텍스트 추출
+            PDFTextStripper pdfStripper = new PDFTextStripper();
+            text = pdfStripper.getText(document);
+
+
+
+            // 추출된 텍스트 출력
+//            System.out.println(text);
+
+            // 문서 닫기
+            document.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        List<String> list = new ArrayList<>();
+        List<Quiz> quizList = new ArrayList<>();
+
+        for (int i = 1; i <= 20; i++) {
+            System.out.println(i);
+            String startText = i + ". ";
+            int fromIdx = text.indexOf(i + ". ") + startText.length();
+            int endIdx = text.indexOf((i + 1) + ". ");
+            String quiz = text.substring(fromIdx, endIdx < 0 ? text.length() : endIdx);
+            list.add(quiz);
+
+
+            String question = quiz.substring(0, quiz.indexOf("?") + 1);
+            Pattern pattern = Pattern.compile("■ 정답\\s*:\\s*");
+            Matcher matcherEnd = pattern.matcher(quiz);
+
+            String choices = quiz.substring(quiz.indexOf("?") + 1, matcherEnd.start());
+            Matcher matcherStart = matcherEnd;
+            pattern = Pattern.compile("■ 해설\\s*:\\s*");
+            matcherStart = pattern.matcher(quiz);
+
+            String answer = quiz.substring(matcherStart.end(), matcherEnd.start());
+            matcherStart = matcherEnd;
+
+            String explanation = quiz.substring(matcherStart.end());
+            Quiz quizClass = Quiz.builder()
+                    .question(question)
+                    .choices(choices)
+                    .answer(answer)
+                    .explanation(explanation)
+                    .build();
+            quizList.add(quizClass);
+
+        }
+
+//        for (int i = 0; i < list.size(); i++) {
+//            System.out.println(i + ":\n" + list.get(i));
+//        }
+
+
+
+
+
+        // ObjectMapper 객체 생성
+        ObjectMapper mapper = new ObjectMapper();
+
+        // JSON 파일로 저장
+        try {
+            mapper.writeValue(new File("src/main/resources/driver_test.json"), quizList);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
